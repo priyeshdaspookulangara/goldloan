@@ -95,6 +95,7 @@ $transactions_result = $conn->query($transactions_sql);
                                     <th>Purity (K)</th>
                                     <th>Hallmark Verified</th>
                                     <th>Storage Location</th>
+                                    <th>Locker Number</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -105,6 +106,7 @@ $transactions_result = $conn->query($transactions_sql);
                                     <td><?php echo $item['purity_karat']; ?></td>
                                     <td><?php echo $item['hallmark_verified'] ? 'Yes' : 'No'; ?></td>
                                     <td><?php echo $item['storage_location']; ?></td>
+                                    <td><?php echo $item['locker_number'] ?? 'N/A'; ?></td>
                                 </tr>
                                 <?php endwhile; ?>
                             </tbody>

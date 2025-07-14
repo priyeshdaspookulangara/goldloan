@@ -12,6 +12,7 @@ $(document).ready(function() {
                 <td><input type="number" step="0.01" name="items[${itemIndex}][weight]" class="form-control item-calc" required></td>
                 <td><input type="number" name="items[${itemIndex}][purity]" class="form-control item-calc" required></td>
                 <td><input type="text" name="items[${itemIndex}][location]" class="form-control" required></td>
+                <td><input type="text" name="items[${itemIndex}][locker_number]" class="form-control"></td>
                 <td><button type="button" class="btn btn-danger btn-sm remove-item-btn" data-row-id="${itemIndex}">Remove</button></td>
             </tr>
         `;

@@ -42,11 +42,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // 3. Insert Collateral Items
         if (isset($_POST['items'])) {
             foreach ($_POST['items'] as $item) {
-                $desc = $item['description'];
+                $desc = $conn->real_escape_string($item['description']);
                 $weight = $item['weight'];
                 $purity = $item['purity'];
-                $location = $item['location'];
-                $collateral_sql = "INSERT INTO collateral_items (loan_id, item_description, weight_grams, purity_karat, storage_location) VALUES ($loan_id, '$desc', $weight, $purity, '$location')";
+                $location = $conn->real_escape_string($item['location']);
+                $locker_number = isset($item['locker_number']) && !empty($item['locker_number']) ? "'".$conn->real_escape_string($item['locker_number'])."'" : "NULL";
+
+                $collateral_sql = "INSERT INTO collateral_items (loan_id, item_description, weight_grams, purity_karat, storage_location, locker_number) VALUES ($loan_id, '$desc', $weight, $purity, '$location', $locker_number)";
                 if (!$conn->query($collateral_sql)) {
                     throw new Exception("Error adding collateral: " . $conn->error);
                 }
@@ -143,6 +145,7 @@ $branches_result = $conn->query("SELECT id, branch_name FROM branches");
                                         <th>Weight (grams)</th>
                                         <th>Purity (karat)</th>
                                         <th>Storage Location</th>
+                                        <th>Locker No. (Optional)</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>

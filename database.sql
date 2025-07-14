@@ -78,17 +78,18 @@ CREATE TABLE `collateral_items` (
   `purity_karat` int(11) NOT NULL,
   `hallmark_verified` tinyint(1) DEFAULT 0,
   `image_path` varchar(255) DEFAULT NULL,
-  `storage_location` varchar(255) DEFAULT NULL
+  `storage_location` varchar(255) DEFAULT NULL,
+  `locker_number` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `collateral_items`
 --
 
-INSERT INTO `collateral_items` (`id`, `loan_id`, `item_description`, `weight_grams`, `purity_karat`, `hallmark_verified`, `image_path`, `storage_location`) VALUES
-(1, 1, 'Gold Necklace', '50.00', 22, 1, 'uploads/necklace.jpg', 'Vault A, Shelf 1'),
-(2, 1, 'Gold Coins (10)', '100.00', 24, 1, 'uploads/coins.jpg', 'Vault A, Shelf 1'),
-(3, 2, 'Gold Bangle', '75.50', 22, 0, 'uploads/bangle.jpg', 'Vault B, Shelf 3');
+INSERT INTO `collateral_items` (`id`, `loan_id`, `item_description`, `weight_grams`, `purity_karat`, `hallmark_verified`, `image_path`, `storage_location`, `locker_number`) VALUES
+(1, 1, 'Gold Necklace', '50.00', 22, 1, 'uploads/necklace.jpg', 'Vault A, Shelf 1', 'LKR-101'),
+(2, 1, 'Gold Coins (10)', '100.00', 24, 1, 'uploads/coins.jpg', 'Vault A, Shelf 1', 'LKR-101'),
+(3, 2, 'Gold Bangle', '75.50', 22, 0, 'uploads/bangle.jpg', 'Vault B, Shelf 3', NULL);
 
 -- --------------------------------------------------------
 
