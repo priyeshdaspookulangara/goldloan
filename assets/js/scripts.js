@@ -1,5 +1,53 @@
 $(document).ready(function() {
 
+    // --- Client Search Logic on New Loan Page ---
+
+    $('#search-client-btn').on('click', function() {
+        const contactNumber = $('#search_contact').val();
+        const resultDiv = $('#client-search-result');
+        const formDiv = $('#client-details-form');
+
+        if (!contactNumber) {
+            resultDiv.html('<div class="alert alert-warning">Please enter a contact number to search.</div>');
+            return;
+        }
+
+        $.ajax({
+            url: 'ajax_get_client.php',
+            type: 'GET',
+            data: { contact_number: contactNumber },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    const client = response.client;
+                    $('#client_id').val(client.id);
+                    $('#client_name').val(client.name).prop('readonly', true);
+                    $('#contact_number').val(client.contact_number).prop('readonly', true);
+                    $('#address').val(client.address).prop('readonly', true);
+                    $('#id_proof_type').val(client.id_proof_type).prop('readonly', true);
+                    $('#id_proof_number').val(client.id_proof_number).prop('readonly', true);
+                    resultDiv.html('<div class="alert alert-success">Client found. Details populated above.</div>');
+                    formDiv.slideDown();
+                } else {
+                    resultDiv.html('<div class="alert alert-danger">' + response.message + ' You can create a new client profile below.</div>');
+                    $('#new-client-btn').click(); // Show a blank form
+                }
+            },
+            error: function() {
+                resultDiv.html('<div class="alert alert-danger">An error occurred while searching.</div>');
+            }
+        });
+    });
+
+    $('#new-client-btn').on('click', function() {
+        const formDiv = $('#client-details-form');
+        $('#client_id').val('');
+        formDiv.find('input, textarea').val('').prop('readonly', false);
+        $('#client-search-result').html('');
+        formDiv.slideDown();
+    });
+
+
     // --- New Loan Form Logic ---
 
     let itemIndex = 0;
@@ -27,23 +75,55 @@ $(document).ready(function() {
         calculateTotals(); // Recalculate if an item is removed
     });
 
-    // --- Real-time Calculations ---
+    // --- Real-time Calculations (Server-Side) ---
 
-    // Function to calculate total repayable amount
     function calculateTotals() {
         const principal = parseFloat($('#principal_amount').val()) || 0;
         const interestRate = parseFloat($('#interest_rate').val()) || 0;
         const tenure = parseInt($('#loan_tenure').val()) || 0;
+        const type = $('#repayment_type').val();
 
-        if (principal > 0 && interestRate > 0 && tenure > 0) {
-            const interest = (principal * (interestRate / 100) * tenure) / 12;
-            const totalRepayable = principal + interest;
+        // Show/hide EMI display
+        if (type === 'emi') {
+            $('#emi-display-container').show();
+        } else {
+            $('#emi-display-container').hide();
+        }
 
-            $('#total-repayable-display').text('$' + totalRepayable.toFixed(2));
-            $('#total_repayable').val(totalRepayable.toFixed(2));
+        if (principal > 0 && interestRate >= 0 && tenure > 0) {
+            $.ajax({
+                url: 'ajax_calculate_loan.php',
+                type: 'POST',
+                data: {
+                    principal: principal,
+                    rate: interestRate,
+                    tenure: tenure,
+                    type: type
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#total-repayable-display').text('$' + response.total_repayable.toFixed(2));
+                        $('#total_repayable').val(response.total_repayable.toFixed(2));
+                        if (type === 'emi') {
+                            $('#emi-display').text('$' + response.emi_amount.toFixed(2));
+                        }
+                    } else {
+                        // Handle error from backend, e.g., display a message
+                        $('#total-repayable-display').text('$0.00');
+                        $('#total_repayable').val('');
+                        $('#emi-display').text('$0.00');
+                    }
+                },
+                error: function() {
+                    // Handle AJAX error
+                     $('#total-repayable-display').text('Error!');
+                }
+            });
         } else {
             $('#total-repayable-display').text('$0.00');
             $('#total_repayable').val('');
+            $('#emi-display').text('$0.00');
         }
     }
 
@@ -69,7 +149,7 @@ $(document).ready(function() {
 
 
     // Event listeners for loan term inputs
-    $('#principal_amount, #interest_rate, #loan_tenure').on('input', calculateTotals);
+    $('#principal_amount, #interest_rate, #loan_tenure, #repayment_type').on('input change', calculateTotals);
     $('#loan_date, #loan_tenure').on('input', calculateDueDate);
 
     // Initial calculation on page load if values are pre-filled

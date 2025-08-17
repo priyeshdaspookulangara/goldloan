@@ -125,6 +125,7 @@ CREATE TABLE `invoices` (
   `due_date` date NOT NULL,
   `principal_amount` decimal(10,2) NOT NULL,
   `interest_rate` decimal(5,2) NOT NULL,
+  `repayment_type` enum('bullet','emi') NOT NULL DEFAULT 'bullet',
   `total_repayable` decimal(10,2) NOT NULL,
   `outstanding_amount` decimal(10,2) NOT NULL,
   `status` varchar(20) DEFAULT 'active',
@@ -136,9 +137,25 @@ CREATE TABLE `invoices` (
 -- Dumping data for table `invoices`
 --
 
-INSERT INTO `invoices` (`id`, `loan_number`, `client_id`, `loan_date`, `due_date`, `principal_amount`, `interest_rate`, `total_repayable`, `outstanding_amount`, `status`, `branch_id`, `officer_id`) VALUES
-(1, 'GL-2023-001', 1, '2023-11-01', '2024-05-01', '5000.00', '12.50', '5625.00', '5625.00', 'active', 1, 2),
-(2, 'GL-2023-002', 2, '2023-11-15', '2024-11-15', '7500.00', '10.00', '8250.00', '8250.00', 'active', 1, 2);
+INSERT INTO `invoices` (`id`, `loan_number`, `client_id`, `loan_date`, `due_date`, `principal_amount`, `interest_rate`, `repayment_type`, `total_repayable`, `outstanding_amount`, `status`, `branch_id`, `officer_id`) VALUES
+(1, 'GL-2023-001', 1, '2023-11-01', '2024-05-01', '5000.00', '12.50', 'bullet', '5625.00', '5625.00', 'active', 1, 2),
+(2, 'GL-2023-002', 2, '2023-11-15', '2024-11-15', '7500.00', '10.00', 'bullet', '8250.00', '8250.00', 'active', 1, 2);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `repayment_schedule`
+--
+
+CREATE TABLE `repayment_schedule` (
+  `id` int(11) NOT NULL,
+  `loan_id` int(11) NOT NULL,
+  `due_date` date NOT NULL,
+  `installment_amount` decimal(10,2) NOT NULL,
+  `principal_component` decimal(10,2) NOT NULL,
+  `interest_component` decimal(10,2) NOT NULL,
+  `status` enum('pending','paid','overdue') NOT NULL DEFAULT 'pending'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -223,6 +240,13 @@ ALTER TABLE `invoices`
   ADD KEY `officer_id` (`officer_id`);
 
 --
+-- Indexes for table `repayment_schedule`
+--
+ALTER TABLE `repayment_schedule`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `loan_id` (`loan_id`);
+
+--
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -271,6 +295,12 @@ ALTER TABLE `invoices`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `repayment_schedule`
+--
+ALTER TABLE `repayment_schedule`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -299,6 +329,12 @@ ALTER TABLE `invoices`
   ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`),
   ADD CONSTRAINT `invoices_ibfk_2` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`),
   ADD CONSTRAINT `invoices_ibfk_3` FOREIGN KEY (`officer_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `repayment_schedule`
+--
+ALTER TABLE `repayment_schedule`
+  ADD CONSTRAINT `repayment_schedule_ibfk_1` FOREIGN KEY (`loan_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `transactions`

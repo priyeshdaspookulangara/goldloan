@@ -3,25 +3,46 @@ require_once 'includes/auth.php';
 check_login();
 require_once 'db_connect.php';
 
+// Handle Delete Action First
+if (isset($_GET['delete'])) {
+    $loan_id_to_delete = $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM invoices WHERE id = ?");
+    $stmt->bind_param("i", $loan_id_to_delete);
+    if ($stmt->execute()) {
+        header("Location: manage_loans.php?deleted=true");
+        exit();
+    } else {
+        // It's good practice to handle potential errors
+        die("Error deleting record: " . $stmt->error);
+    }
+    $stmt->close();
+}
+
 // Base query
-$sql = "SELECT i.id, i.loan_number, c.name as client_name, i.principal_amount, i.outstanding_amount, i.due_date, i.status, b.branch_name
+$sql = "SELECT i.id, i.loan_number, c.name as client_name, i.principal_amount, i.outstanding_amount, i.due_date, i.status, b.branch_name, i.repayment_type
         FROM invoices i
         JOIN clients c ON i.client_id = c.id
         JOIN branches b ON i.branch_id = b.id";
 
-// Filtering logic
+// Dynamic Filtering
 $where_clauses = [];
+$params = [];
+$types = '';
+
 if (!empty($_GET['loan_number'])) {
-    $ln = $_GET['loan_number'];
-    $where_clauses[] = "i.loan_number LIKE '%$ln%'";
+    $where_clauses[] = "i.loan_number LIKE ?";
+    $params[] = "%" . $_GET['loan_number'] . "%";
+    $types .= 's';
 }
 if (!empty($_GET['client_name'])) {
-    $cn = $_GET['client_name'];
-    $where_clauses[] = "c.name LIKE '%$cn%'";
+    $where_clauses[] = "c.name LIKE ?";
+    $params[] = "%" . $_GET['client_name'] . "%";
+    $types .= 's';
 }
 if (!empty($_GET['status'])) {
-    $st = $_GET['status'];
-    $where_clauses[] = "i.status = '$st'";
+    $where_clauses[] = "i.status = ?";
+    $params[] = $_GET['status'];
+    $types .= 's';
 }
 
 if (count($where_clauses) > 0) {
@@ -30,19 +51,14 @@ if (count($where_clauses) > 0) {
 
 $sql .= " ORDER BY i.loan_date DESC";
 
-$result = $conn->query($sql);
+$stmt = $conn->prepare($sql);
 
-// Handle Delete
-if (isset($_GET['delete'])) {
-    $loan_id_to_delete = $_GET['delete'];
-    $delete_sql = "DELETE FROM invoices WHERE id = $loan_id_to_delete";
-    if ($conn->query($delete_sql)) {
-        header("Location: manage_loans.php?deleted=true");
-        exit();
-    } else {
-        // Handle error
-    }
+if (!empty($types) && count($params) > 0) {
+    $stmt->bind_param($types, ...$params);
 }
+
+$stmt->execute();
+$result = $stmt->get_result();
 
 ?>
 <!DOCTYPE html>
@@ -70,10 +86,10 @@ if (isset($_GET['delete'])) {
                     <div class="card-body">
                         <form action="manage_loans.php" method="get" class="row g-3">
                             <div class="col-md-4">
-                                <input type="text" name="loan_number" class="form-control" placeholder="Loan Number" value="<?php echo $_GET['loan_number'] ?? ''; ?>">
+                                <input type="text" name="loan_number" class="form-control" placeholder="Loan Number" value="<?php echo htmlspecialchars($_GET['loan_number'] ?? ''); ?>">
                             </div>
                             <div class="col-md-4">
-                                <input type="text" name="client_name" class="form-control" placeholder="Client Name" value="<?php echo $_GET['client_name'] ?? ''; ?>">
+                                <input type="text" name="client_name" class="form-control" placeholder="Client Name" value="<?php echo htmlspecialchars($_GET['client_name'] ?? ''); ?>">
                             </div>
                             <div class="col-md-3">
                                 <select name="status" class="form-select">
@@ -105,6 +121,7 @@ if (isset($_GET['delete'])) {
                                 <th>Outstanding</th>
                                 <th>Due Date</th>
                                 <th>Status</th>
+                                <th>Repayment Type</th>
                                 <th>Branch</th>
                                 <th>Actions</th>
                             </tr>
@@ -113,13 +130,14 @@ if (isset($_GET['delete'])) {
                             <?php if ($result->num_rows > 0): ?>
                                 <?php while($row = $result->fetch_assoc()): ?>
                                     <tr>
-                                        <td><?php echo $row['loan_number']; ?></td>
-                                        <td><?php echo $row['client_name']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['loan_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['client_name']); ?></td>
                                         <td>$<?php echo number_format($row['principal_amount'], 2); ?></td>
                                         <td>$<?php echo number_format($row['outstanding_amount'], 2); ?></td>
-                                        <td><?php echo $row['due_date']; ?></td>
-                                        <td><span class="badge bg-<?php echo $row['status'] == 'active' ? 'success' : ($row['status'] == 'overdue' ? 'danger' : 'secondary'); ?>"><?php echo ucfirst($row['status']); ?></span></td>
-                                        <td><?php echo $row['branch_name']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['due_date']); ?></td>
+                                        <td><span class="badge bg-<?php echo $row['status'] == 'active' ? 'success' : ($row['status'] == 'overdue' ? 'danger' : 'secondary'); ?>"><?php echo ucfirst(htmlspecialchars($row['status'])); ?></span></td>
+                                        <td><?php echo ucfirst(htmlspecialchars($row['repayment_type'])); ?></td>
+                                        <td><?php echo htmlspecialchars($row['branch_name']); ?></td>
                                         <td>
                                             <a href="loan_details.php?id=<?php echo $row['id']; ?>" class="btn btn-info btn-sm">View</a>
                                             <a href="#" class="btn btn-success btn-sm">Payment</a>
@@ -129,7 +147,7 @@ if (isset($_GET['delete'])) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-center">No loans found.</td>
+                                    <td colspan="9" class="text-center">No loans found.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
