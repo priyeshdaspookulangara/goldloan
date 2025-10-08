@@ -53,7 +53,8 @@ CREATE TABLE `clients` (
   `address` text DEFAULT NULL,
   `contact_number` varchar(20) DEFAULT NULL,
   `id_proof_type` varchar(50) DEFAULT NULL,
-  `id_proof_number` varchar(50) DEFAULT NULL
+  `id_proof_number` varchar(50) DEFAULT NULL,
+  `id_proof_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

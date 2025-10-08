@@ -17,7 +17,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $id_proof_type = $_POST['id_proof_type'];
         $id_proof_number = $_POST['id_proof_number'];
 
-        $client_sql = "INSERT INTO clients (name, contact_number, address, id_proof_type, id_proof_number) VALUES ('$client_name', '$contact_number', '$address', '$id_proof_type', '$id_proof_number')";
+        // Handle ID Proof Upload
+        $id_proof_path = '';
+        if (isset($_FILES['id_proof_file']) && $_FILES['id_proof_file']['error'] == 0) {
+            $target_dir = "uploads/id_proofs/";
+
+            // Create directory if it doesn't exist
+            if (!file_exists($target_dir) && !mkdir($target_dir, 0777, true) && !is_dir($target_dir)) {
+                throw new \RuntimeException(sprintf('Directory "%s" was not created', $target_dir));
+            }
+
+            $file_info = pathinfo($_FILES["id_proof_file"]["name"]);
+            $file_extension = strtolower($file_info['extension']);
+            $safe_filename = uniqid() . '_' . time() . '.' . $file_extension;
+            $target_file = $target_dir . $safe_filename;
+
+            // Check file size (e.g., 5MB limit)
+            if ($_FILES["id_proof_file"]["size"] > 5000000) {
+                throw new Exception("Sorry, your file is too large. Maximum size is 5MB.");
+            }
+
+            // Allow certain file formats
+            $allowed_extensions = ["jpg", "jpeg", "png", "pdf"];
+            if (!in_array($file_extension, $allowed_extensions)) {
+                throw new Exception("Sorry, only JPG, JPEG, PNG & PDF files are allowed.");
+            }
+
+            if (move_uploaded_file($_FILES["id_proof_file"]["tmp_name"], $target_file)) {
+                $id_proof_path = $target_file;
+            } else {
+                throw new Exception("Sorry, there was an error uploading your file.");
+            }
+        } else {
+            throw new Exception("ID proof file is required and must be uploaded without errors.");
+        }
+
+        $client_sql = "INSERT INTO clients (name, contact_number, address, id_proof_type, id_proof_number, id_proof_path) VALUES ('$client_name', '$contact_number', '$address', '$id_proof_type', '$id_proof_number', '$id_proof_path')";
         if (!$conn->query($client_sql)) {
             throw new Exception("Error creating client: " . $conn->error);
         }
@@ -100,7 +135,7 @@ $branches_result = $conn->query("SELECT id, branch_name FROM branches");
                     </div>
                 <?php endif; ?>
 
-                <form id="loan-form" action="new_loan.php" method="post">
+                <form id="loan-form" action="new_loan.php" method="post" enctype="multipart/form-data">
                     <!-- Step 1: Customer Details -->
                     <div class="card mb-4">
                         <div class="card-header">
@@ -120,13 +155,22 @@ $branches_result = $conn->query("SELECT id, branch_name FROM branches");
                                     <label for="address" class="form-label">Address</label>
                                     <textarea class="form-control" id="address" name="address" rows="2" required></textarea>
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label for="id_proof_type" class="form-label">ID Proof Type</label>
-                                    <input type="text" class="form-control" id="id_proof_type" name="id_proof_type" placeholder="e.g., Passport, Driver's License" required>
+                                    <select class="form-control" id="id_proof_type" name="id_proof_type" required>
+                                        <option value="Aadhar">Aadhar</option>
+                                        <option value="Driving License">Driving License</option>
+                                        <option value="Voters ID card">Voters ID card</option>
+                                        <option value="Passport">Passport</option>
+                                    </select>
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label for="id_proof_number" class="form-label">ID Proof Number</label>
                                     <input type="text" class="form-control" id="id_proof_number" name="id_proof_number" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_proof_file" class="form-label">Upload ID Proof</label>
+                                    <input type="file" class="form-control" id="id_proof_file" name="id_proof_file" required>
                                 </div>
                             </div>
                         </div>
